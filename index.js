@@ -128,11 +128,11 @@ async function importSampleData(data) {
 }
 
 // Function to sync data from PostgreSQL to Meilisearch
-// Function to sync data from PostgreSQL to Meilisearch
 async function syncDataToMeilisearch() {
     const index = meiliClient.index(indexName);
 
     try {
+        await index.deleteAllDocuments();
         fastify.log.info("Starting sync from PostgreSQL to Meilisearch");
 
         // Get all resources from PostgreSQL
@@ -148,9 +148,7 @@ async function syncDataToMeilisearch() {
         // Prepare documents to add/update
         const docsToUpsert = resources.map((resource) => ({
             id: resource.id.toString(),
-            resourceId: resource["resourceid"]
-                ? resource["resourceid"].toString()
-                : "",
+            resourceId: resource["resourceId"],
             type: resource.type,
             title: resource.title,
             level: resource.level,
@@ -158,7 +156,7 @@ async function syncDataToMeilisearch() {
             examBoard: resource["examBoard"],
             link: resource.link,
             author: resource.author,
-            averageRating: resource["averagerating"] || 0,
+            averageRating: resource["averageRating"] || 5,
             description: resource.description || "",
             // Create tags from subject, level, and examBoard for better filtering
             tags: [
@@ -208,8 +206,6 @@ async function initializeMeilisearchIndex() {
             "examBoard",
             "level",
             "type",
-            "author",
-            "tags",
         ]);
 
         // Configure filterable attributes
@@ -225,6 +221,27 @@ async function initializeMeilisearchIndex() {
 
         // Configure sortable attributes
         await index.updateSortableAttributes(["averageRating", "title"]);
+
+        // Configure typo tolerance settings
+        await index.updateTypoTolerance({
+            enabled: true,
+            minWordSizeForTypos: {
+                oneTypo: 3, // Allow one typo for words with at least 3 characters
+                twoTypos: 6, // Allow two typos for words with at least 6 characters
+            },
+        });
+
+        // Configure synonyms for better fuzzy matching
+        await index.updateSynonyms({
+            math: ["mathematics", "maths"],
+            bio: ["biology"],
+            chem: ["chemistry"],
+            phys: ["physics"],
+            eng: ["english"],
+            lit: ["literature"],
+            geo: ["geography"],
+            hist: ["history"],
+        });
 
         fastify.log.info("Meilisearch index configured successfully");
     } catch (error) {
@@ -246,6 +263,7 @@ fastify.addHook("onReady", async () => {
         //await initializeDatabase(); -- removed this as potentially destructive
 
         //await initializeMeilisearchIndex();
+
         await syncDataToMeilisearch();
     } catch (error) {
         fastify.log.error("Error during server initialization:", error);
@@ -265,6 +283,7 @@ fastify.get("/search", async (request, reply) => {
             limit = 20,
             offset = 0,
             sort = "",
+            fuzzy = "true", // Add fuzzy parameter with default true
         } = request.query;
 
         // Parse tags if provided
@@ -275,6 +294,16 @@ fastify.get("/search", async (request, reply) => {
             limit: parseInt(limit.toString()),
             offset: parseInt(offset.toString()),
         };
+
+        // Configure fuzzy search parameters
+        const isFuzzy = fuzzy.toString() === "true";
+        if (isFuzzy) {
+            // For fuzzy search, use "all" matching strategy which is more lenient
+            searchParams.matchingStrategy = "all";
+        } else {
+            // For exact search, use "last" matching strategy which is stricter
+            searchParams.matchingStrategy = "last";
+        }
 
         // Build filters array
         const filters = [];
@@ -330,6 +359,7 @@ fastify.get("/search", async (request, reply) => {
             hits: searchResults.hits,
             totalHits: searchResults.estimatedTotalHits,
             processingTimeMs: searchResults.processingTimeMs,
+            fuzzyEnabled: isFuzzy,
         };
     } catch (error) {
         request.log.error(error);
@@ -339,6 +369,7 @@ fastify.get("/search", async (request, reply) => {
         });
     }
 });
+
 
 // Add endpoint to manually trigger sync
 fastify.post("/sync", async (request, reply) => {
