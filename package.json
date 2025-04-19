@@ -1,0 +1,19 @@
+{
+  "name": "gcselog-search-api",
+  "module": "index.js",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "fastify": "^5.3.2",
+    "meilisearch": "^0.50.0",
+    "node-cron": "^3.0.3",
+    "pg": "^8.14.1"
+  }
+}
