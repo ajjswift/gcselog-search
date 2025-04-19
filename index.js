@@ -375,7 +375,7 @@ fastify.get("/filters", async (request, reply) => {
 
         return {
             subjects: subjects.map((row) => row.subject),
-            examBoards: examBoards.map((row) => row.examboard),
+            examBoards: examBoards.map((row) => row.examBoard),
             levels: levels.map((row) => row.level),
             types: types.map((row) => row.type),
         };
