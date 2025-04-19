@@ -243,7 +243,7 @@ fastify.addHook("onReady", async () => {
         await pgClient.connect();
         fastify.log.info("Connected to PostgreSQL database");
 
-        await initializeDatabase();
+        //await initializeDatabase(); -- removed this as potentially destructive
 
         //await initializeMeilisearchIndex();
         await syncDataToMeilisearch();
