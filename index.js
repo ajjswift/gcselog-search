@@ -126,8 +126,46 @@ async function importSampleData(data) {
         throw error;
     }
 }
+// Function to update ratings from PostgreSQL to Meilisearch
+async function updateRatingsInMeilisearch() {
+    try {
+        fastify.log.info(
+            "Starting ratings update from PostgreSQL to Meilisearch"
+        );
+        const index = meiliClient.index(indexName);
 
-// Function to sync data from PostgreSQL to Meilisearch
+        // Get all resources with their current ratings from PostgreSQL
+        const { rows: resources } = await pgClient.query(
+            'SELECT id, "averageRating" FROM "Resource"'
+        );
+
+        // Prepare documents to update (only updating the rating field)
+        const docsToUpdate = resources.map((resource) => ({
+            id: resource.id.toString(),
+            averageRating: resource.averageRating || 0,
+        }));
+
+        if (docsToUpdate.length > 0) {
+            fastify.log.info(
+                `Updating ratings for ${docsToUpdate.length} documents in Meilisearch`
+            );
+            // Use partial update to only update the rating field
+            await index.updateDocuments(docsToUpdate);
+            fastify.log.info("Ratings update completed successfully");
+        } else {
+            fastify.log.info("No ratings to update");
+        }
+    } catch (error) {
+        fastify.log.error("Error updating ratings in Meilisearch:", error);
+    }
+}
+
+// Schedule cron job to update ratings every 15 minutes
+cron.schedule("*/15 * * * *", () => {
+    updateRatingsInMeilisearch();
+});
+
+// Add the ratings update to the full sync function as well
 async function syncDataToMeilisearch() {
     const index = meiliClient.index(indexName);
 
@@ -156,7 +194,7 @@ async function syncDataToMeilisearch() {
             examBoard: resource["examBoard"],
             link: resource.link,
             author: resource.author,
-            averageRating: resource["averageRating"] || 5,
+            averageRating: resource["averageRating"] || 0, // Ensure default is 0 instead of 5
             description: resource.description || "",
             // Create tags from subject, level, and examBoard for better filtering
             tags: [
@@ -271,6 +309,7 @@ fastify.addHook("onReady", async () => {
 });
 
 // Register a route to search Meilisearch
+// Register a route to search Meilisearch
 fastify.get("/search", async (request, reply) => {
     try {
         const {
@@ -282,8 +321,8 @@ fastify.get("/search", async (request, reply) => {
             type = "",
             limit = 20,
             offset = 0,
-            sort = "",
-            fuzzy = "true", // Add fuzzy parameter with default true
+            sort = "averageRating:desc", // Set default sort to averageRating:desc
+            fuzzy = "true",
         } = request.query;
 
         // Parse tags if provided
@@ -340,12 +379,14 @@ fastify.get("/search", async (request, reply) => {
             searchParams.filter = filters.join(" AND ");
         }
 
-        // Add sorting if provided
-        if (sort) {
-            const [field, direction] = sort.toString().split(":");
-            if (field && (direction === "asc" || direction === "desc")) {
-                searchParams.sort = [`${field}:${direction}`];
-            }
+        // Add sorting - use provided sort parameter or default to averageRating:desc
+        const sortParam = sort || "averageRating:desc";
+        const [field, direction] = sortParam.toString().split(":");
+        if (field && (direction === "asc" || direction === "desc")) {
+            searchParams.sort = [`${field}:${direction}`];
+        } else {
+            // Fallback to default sort if invalid sort parameter
+            searchParams.sort = ["averageRating:desc"];
         }
 
         // Perform the search
@@ -369,6 +410,7 @@ fastify.get("/search", async (request, reply) => {
         });
     }
 });
+
 
 
 // Add endpoint to manually trigger sync
