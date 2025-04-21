@@ -7,7 +7,7 @@ import { setupCronJobs } from "./cron/index.js";
 
 // Initialize Fastify
 const fastify = Fastify({
-    logger: true,
+    logger: process.env.NODE_ENV !== "production",
 });
 
 // Register routes
