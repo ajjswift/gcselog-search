@@ -2,7 +2,7 @@
 This is the GCSELog Search API repository. 
 The GCSELog Search API allows our developers and our users to query the resources held by GCSELog without having to worry about handing out authentication tokens for Meilisearch.
 
-View the main GCSELog repository [https://github.com/githubfan/gcselog](here).
+View the main GCSELog repository [here](https://github.com/githubfan/gcselog).
 
 ## Getting started
 
@@ -10,7 +10,7 @@ To start, copy the contents of the `.env.example` file to a `.env` file.
 Then, follow the comments within the file to get yourself started.
 
 ## How to run
-This project uses [https://bun.sh](Bun)
+This project uses [Bun](https://bun.sh)
 
 To install dependencies:
 
