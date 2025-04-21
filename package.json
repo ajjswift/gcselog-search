@@ -1,19 +1,21 @@
 {
-  "name": "gcselog-search-api",
-  "module": "index.js",
-  "type": "module",
-  "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "dotenv": "^16.5.0",
-    "fastify": "^5.3.2",
-    "meilisearch": "^0.50.0",
-    "node-cron": "^3.0.3",
-    "pg": "^8.14.1"
-  }
+    "name": "resource-search-api",
+    "version": "1.0.0",
+    "description": "API for searching educational resources",
+    "main": "src/server.js",
+    "type": "module",
+    "scripts": {
+        "start": "node src/server.js",
+        "dev": "nodemon src/server.js"
+    },
+    "dependencies": {
+        "dotenv": "^16.0.3",
+        "fastify": "^4.15.0",
+        "meilisearch": "^0.32.0",
+        "node-cron": "^3.0.2",
+        "pg": "^8.10.0"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.9"
+    }
 }
